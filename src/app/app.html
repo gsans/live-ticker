@@ -1,0 +1,721 @@
+<div id="financial-portal-root" class="min-h-screen bg-[#0A0A0B] text-white font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+  
+  <!-- Outer glowing background accents -->
+  <div id="glow-ambient-top" class="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+  <div id="glow-ambient-bottom" class="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- Primary Layout Header -->
+  <header id="app-top-header" class="relative z-10 border-b border-white/10 bg-[#0A0A0B]/80 backdrop-blur-md px-6 py-6 transition-all duration-300">
+    <div id="header-container" class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      
+      <!-- Brand & Stats Title -->
+      <div id="brand-segment" class="flex flex-col gap-1">
+        <h1 id="title-main" class="text-6xl md:text-8xl font-black tracking-tighter leading-none italic uppercase text-white flex items-baseline gap-2">
+          Aura.API
+        </h1>
+        <div class="flex gap-4 mt-2 items-center">
+          <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-mono uppercase tracking-widest text-emerald-500">Real-time Stream Active</span>
+          <span class="text-xs font-mono uppercase text-slate-500 hidden md:inline ml-2">v2.4.0 Live Audit</span>
+        </div>
+      </div>
+
+      <!-- Navigation & Active Tab Switches -->
+      <nav id="header-navigation" class="flex flex-wrap items-center bg-[#141416] rounded-2xl p-1 border border-white/10 shadow-inner gap-1">
+        <button id="nav-btn-dashboard" 
+                (click)="activeTab.set('dashboard')" 
+                [class]="activeTab() === 'dashboard' ? 'bg-white text-black font-semibold shadow-md' : 'text-white/60 hover:text-white'"
+                class="px-4 py-2.5 text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all duration-200 flex items-center gap-1.5 cursor-pointer">
+          <mat-icon class="text-sm">dashboard</mat-icon>
+          Terminal
+        </button>
+        <button id="nav-btn-strategies" 
+                (click)="activeTab.set('strategies')" 
+                [class]="activeTab() === 'strategies' ? 'bg-white text-black font-semibold shadow-md' : 'text-white/60 hover:text-white'"
+                class="px-4 py-2.5 text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all duration-200 flex items-center gap-1.5 cursor-pointer">
+          <mat-icon class="text-sm">moving</mat-icon>
+          Strategies
+          @if (strategySuggestionsList().length > 0) {
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          }
+        </button>
+        <button id="nav-btn-logs" 
+                (click)="activeTab.set('logs')" 
+                [class]="activeTab() === 'logs' ? 'bg-white text-black font-semibold shadow-md' : 'text-white/60 hover:text-white'"
+                class="px-4 py-2.5 text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all duration-200 flex items-center gap-1.5 cursor-pointer">
+          <mat-icon class="text-sm">forum</mat-icon>
+          Transcripts
+        </button>
+        <button id="nav-btn-settings" 
+                (click)="activeTab.set('settings')" 
+                [class]="activeTab() === 'settings' ? 'bg-white text-black font-semibold shadow-md' : 'text-white/60 hover:text-white'"
+                class="px-4 py-2.5 text-[10px] font-mono uppercase tracking-wider rounded-xl transition-all duration-200 flex items-center gap-1.5 cursor-pointer">
+          <mat-icon class="text-sm">settings</mat-icon>
+          Audio Config
+        </button>
+      </nav>
+
+      <!-- Connection Status Badges -->
+      <div id="connection-status-block" class="flex items-center gap-3">
+        <!-- Live status -->
+        <div id="socket-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141416] border border-white/10">
+          <span id="socket-dot" 
+                [class]="webSocketStatus() === 'connected' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : (webSocketStatus() === 'connecting' ? 'bg-amber-400 animate-pulse' : 'bg-rose-500')"
+                class="h-2 w-2 rounded-full transition-all duration-300"></span>
+          <span id="socket-text" class="text-[10px] uppercase tracking-wider font-mono text-white/70">
+            WS: {{ webSocketStatus() }}
+          </span>
+        </div>
+
+        <!-- Gemini voice session indicator -->
+        <button id="ai-active-session-indicator" 
+                (click)="aiSessionStatus() === 'active' ? stopAIPortationSession() : startAIPortationSession()"
+                [class]="aiSessionStatus() === 'active' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30' : 'bg-[#141416] border-white/10 text-white/50 hover:border-white/30'"
+                class="flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[10px] uppercase font-mono tracking-wider transition-all duration-200 hover:shadow-lg cursor-pointer">
+          <span [class]="aiSessionStatus() === 'active' ? 'bg-emerald-400 animate-ping' : (aiSessionStatus() === 'activating' ? 'bg-amber-400 animate-spin' : 'bg-slate-600')"
+                class="h-1.5 w-1.5 rounded-full"></span>
+          Aria: {{ aiSessionStatus() }}
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Error Alert Banners -->
+  @if (errorMessage()) {
+    <div id="error-alert-banner" class="bg-rose-950/60 border-y border-rose-500/30 text-rose-200 px-6 py-3.5 backdrop-blur-sm">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <mat-icon class="text-rose-400 text-xl">error_outline</mat-icon>
+          <p id="error-msg-text" class="text-xs font-mono tracking-tight leading-relaxed">{{ errorMessage() }}</p>
+        </div>
+        <button id="error-dismiss-btn" (click)="errorMessage.set(null)" class="text-rose-400 hover:text-white p-1 hover:bg-rose-500/10 rounded-lg transition cursor-pointer">
+          <mat-icon class="text-md">close</mat-icon>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Main Grid Core Container -->
+  <main id="primary-app-container" class="max-w-7xl mx-auto px-6 py-6 relative z-10">
+    <div id="primary-grid" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- LEFT WRAPPER: Market Dashboard (Active Tickers + Linear SVG Analytics Charts) -->
+      <section id="left-column-wrapper" class="lg:col-span-12 xl:col-span-7 flex flex-col gap-6" [class.hidden]="activeTab() !== 'dashboard'">
+        
+        <!-- Live Simulated Financial Asset Ticker Section -->
+        <div id="ticker-slider-section" class="flex flex-col border-l-2 border-white pl-6 py-2">
+          <div class="flex items-center justify-between mb-4">
+            <h2 id="tickers-header-title" class="text-xs font-mono uppercase tracking-widest text-white/50 flex items-center gap-1.5">
+              Market Pulse
+            </h2>
+            <div class="text-[10px] font-mono text-emerald-500 flex items-center gap-1">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live ticking every 2s
+            </div>
+          </div>
+
+          <div id="quick-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            @for (ticker of tickersList(); track ticker.symbol) {
+              <button [id]="'ticker-card-' + ticker.symbol" type="button" 
+                   (click)="selectVisualAsset(ticker.symbol)"
+                   [class]="selectedTickerSymbol() === ticker.symbol ? 'border-white bg-[#141416] shadow-lg shadow-white/5' : 'border-white/10 bg-[#0E0E10] hover:bg-[#141416] hover:border-white/30'"
+                   class="border-[1.5px] rounded-2xl p-4 transition-all duration-300 cursor-pointer group hover:transform hover:-translate-y-0.5 w-full text-left">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="text-xl font-light italic group-hover:text-emerald-400 text-white transition">
+                    {{ ticker.symbol }}
+                  </span>
+                  <span [class]="ticker.change >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/10' : 'bg-rose-500/10 text-rose-400 border-rose-500/10'" 
+                        class="text-[9px] font-mono px-1.5 py-0.5 rounded border leading-none font-semibold">
+                    {{ ticker.change >= 0 ? '+' : '' }}{{ ticker.changePercent }}%
+                  </span>
+                </div>
+                <div class="text-xl font-light tracking-tight text-white font-mono">
+                  ${{ ticker.price.toLocaleString(undefined, { minimumFractionDigits: 2 }) }}
+                </div>
+                <div class="text-[9px] font-mono text-white/40 flex justify-between mt-1">
+                  <span>{{ ticker.name }}</span>
+                  <span>RSI: {{ ticker.rsi }}</span>
+                </div>
+              </button>
+            } @empty {
+              <div class="col-span-full border border-dashed border-white/20 rounded-2xl p-6 text-center text-white/40 text-xs">
+                Waiting for backend ticker seed payloads...
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Selected Asset Technical Indicator Chart Card -->
+        @if (selectedTickerData(); as ticker) {
+          <div id="analytics-chart-panel" class="border-[1.5px] border-white/10 rounded-[30px] p-6 bg-[#0E0E10]/95 backdrop-blur-sm flex flex-col gap-4">
+            
+            <!-- Dashboard Chart metrics header -->
+            <div id="chart-metrics-indicator" class="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-4 gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="p-1 px-3 bg-[#141416] rounded-lg text-xs font-mono text-emerald-400 font-bold border border-white/10">
+                  {{ ticker.symbol }}
+                </div>
+                <div>
+                  <h3 id="current-ticker-heading" class="text-sm font-semibold text-white tracking-tight uppercase">{{ ticker.name }}</h3>
+                  <div class="text-[10px] font-mono text-white/40 flex gap-2">
+                    <span>SMA-7 Period Strategy Evaluation</span>
+                    <span>●</span>
+                    <span class="text-emerald-400 font-semibold uppercase">Volatility: Normal</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-baseline gap-2.5 text-right font-mono">
+                <span id="active-spot-rate" class="text-2xl font-light text-white tracking-tight">${{ ticker.price.toLocaleString() }}</span>
+                <span id="active-spot-change" [class]="ticker.change >= 0 ? 'text-emerald-400' : 'text-rose-400'" class="text-xs font-semibold">
+                  {{ ticker.change >= 0 ? '▲' : '▼' }} ${{ Math.abs(ticker.change) }} ({{ ticker.changePercent }}%)
+                </span>
+              </div>
+            </div>
+
+            <!-- SVG Real-Time Analytical Graph Overlay Canvas -->
+            <div id="chart-canvas-wrapper" class="relative bg-[#030303] overflow-hidden border-[1.5px] border-white/10 rounded-2xl h-[300px] flex items-center justify-center">
+              
+              <!-- Indicator Color Legends on top -->
+              <div class="absolute top-3 left-4 flex flex-wrap gap-x-4 gap-y-1.5 z-20 text-[9px] font-mono text-white/50 bg-[#0A0A0B]/90 py-1.5 px-3 rounded border border-white/10">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-3 h-0.5 bg-emerald-500 inline-block"></span>
+                  <span>Price Stream</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-3 h-0.5 border-t border-dashed border-yellow-500 inline-block"></span>
+                  <span>SMA-7 (${{ ticker.sma }})</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-3 h-0.5 border-t border-dashed border-rose-500 inline-block"></span>
+                  <span>Upper Bollinger Band (${{ ticker.upperBand }})</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-3 h-0.5 border-t border-dashed border-cyan-500 inline-block"></span>
+                  <span>Lower Bollinger Band (${{ ticker.lowerBand }})</span>
+                </div>
+              </div>
+
+              <!-- Indicators Value metrics -->
+              <div class="absolute bottom-3 left-4 z-20 text-[9px] font-mono text-white/50 flex gap-4">
+                <div class="bg-[#0A0A0B]/80 px-2.5 py-1 border border-white/10 rounded">
+                  <span>RSI-7: </span>
+                  <span [class]="ticker.rsi < 30 ? 'text-emerald-400 font-bold' : (ticker.rsi > 70 ? 'text-rose-400 font-bold' : 'text-white')">{{ ticker.rsi }}</span>
+                </div>
+              </div>
+
+              <!-- Fully Scalable SVG graph rendering -->
+              @if (currentPoints().pricePath) {
+                <svg id="svg-analytics-chart" viewBox="0 0 680 280" preserveAspectRatio="none" class="w-full h-full p-2">
+                  <defs>
+                    <linearGradient id="gradient-area" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#10b981" stop-opacity="0.14" />
+                      <stop offset="100%" stop-color="#10b981" stop-opacity="0.00" />
+                    </linearGradient>
+                  </defs>
+
+                  <!-- Under-fill area gradient -->
+                  <path [attr.d]="currentPoints().areaPath" fill="url(#gradient-area)" />
+
+                  <!-- Indicator Boundaries lines -->
+                  <!-- Upper Bollinger -->
+                  <path [attr.d]="currentPoints().upperPath" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="3,3" stroke-opacity="0.75" />
+                  <!-- Lower Bollinger -->
+                  <path [attr.d]="currentPoints().lowerPath" stroke="#06b6d4" stroke-width="1.2" stroke-dasharray="3,3" stroke-opacity="0.75" />
+                  <!-- SMA-7 -->
+                  <path [attr.d]="currentPoints().smaPath" stroke="#eab308" stroke-width="1.2" stroke-dasharray="2,2" stroke-opacity="0.8" />
+
+                  <!-- Active Stock Price Line -->
+                  <path [attr.d]="currentPoints().pricePath" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="drop-shadow-[0_2px_8px_rgba(16,185,129,0.3)]" />
+
+                  <!-- Coordinate dots indicators along the timeline -->
+                  @for (tick of currentPoints().ticks; track tick.x; let last = $last) {
+                    @if (last) {
+                      <circle [attr.cx]="tick.x" [attr.cy]="tick.y" r="4.5" fill="#10b981" class="animate-ping" />
+                      <circle [attr.cx]="tick.x" [attr.cy]="tick.y" r="3.5" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />
+                    }
+                  }
+                </svg>
+              } @else {
+                <div class="text-white/40 font-mono text-xs flex flex-col items-center gap-2">
+                  <mat-icon class="animate-spin text-emerald-400">autorenew</mat-icon>
+                  <span>Syncing graphic timeline...</span>
+                </div>
+              }
+            </div>
+
+            <!-- Alerts threshold customization form & active limits logger -->
+            <div id="alert-customizer-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <!-- Rule creation pane -->
+              <div id="rule-creator-panel" class="border border-white/10 rounded-xl p-4 bg-[#141416]">
+                <h4 id="alert-form-header" class="text-xs font-mono uppercase tracking-wider text-white/70 mb-3 flex items-center gap-1.5">
+                  <mat-icon class="text-white/40 text-sm">notifications_active</mat-icon>
+                  Configure Price Threshold
+                </h4>
+                
+                <form id="price-alert-form" [formGroup]="alertForm" (ngSubmit)="submitAlertConfig()" class="flex flex-col gap-3">
+                  <div class="grid grid-cols-2 gap-2">
+                    <!-- Directions select -->
+                    <div class="flex flex-col gap-1 text-[10px]">
+                      <label for="alert-condition" class="text-white/50 font-mono">Direction</label>
+                      <select id="alert-condition" formControlName="condition" class="bg-[#0A0A0B] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-white">
+                        <option value="above">Crosses Above</option>
+                        <option value="below">Drops Below</option>
+                      </select>
+                    </div>
+                    <!-- Price tag -->
+                    <div class="flex flex-col gap-1 text-[10px]">
+                      <label for="alert-targetPrice" class="text-white/50 font-mono">Price Limit ($)</label>
+                      <input id="alert-targetPrice" type="number" step="any" formControlName="targetPrice" placeholder="Value..." 
+                             class="bg-[#0A0A0B] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-white font-mono" />
+                    </div>
+                  </div>
+
+                  <button id="alert-set-btn" type="submit" [disabled]="!alertForm.valid" 
+                          class="w-full bg-white hover:bg-neutral-200 disabled:opacity-40 text-black font-semibold p-2.5 rounded-lg text-xs transition duration-200 cursor-pointer flex items-center justify-center gap-1.5">
+                    <mat-icon class="text-sm font-bold">add_alert</mat-icon>
+                    Register Alert Criteria
+                  </button>
+                </form>
+              </div>
+
+              <!-- Registered rules list display dashboard -->
+              <div id="active-limits-panel" class="border border-white/10 rounded-xl p-4 bg-[#141416] flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 id="active-alert-title" class="text-xs font-mono uppercase tracking-wider text-white/70 flex items-center gap-1.5">
+                    <mat-icon class="text-white/40 text-sm">playlist_add_check</mat-icon>
+                    Active Watch Limits ({{ activeAlertRules().length }})
+                  </h4>
+                  @if (activeAlertRules().length > 0) {
+                    <button id="alert-clear-btn" (click)="clearAlertRules()" class="text-[9px] text-rose-400 hover:text-rose-300 font-mono uppercase cursor-pointer">
+                      Clear All
+                    </button>
+                  }
+                </div>
+
+                <div id="alerts-scroll-container" class="flex-grow overflow-y-auto max-h-[105px] flex flex-col gap-1.5 pr-1.5">
+                  @for (rule of activeAlertRules(); track rule.symbol + '-' + rule.condition + '-' + rule.targetPrice) {
+                    <div class="bg-[#0A0A0B] border border-white/10 leading-snug rounded-lg p-2 text-[10px] font-mono flex items-center justify-between">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-white px-1 py-0.5 rounded bg-[#141416] font-sans font-bold">{{ rule.symbol }}</span>
+                        <span [class]="rule.condition === 'above' ? 'text-emerald-400' : 'text-rose-400'" class="uppercase font-semibold">
+                          {{ rule.condition }}
+                        </span>
+                        <span class="text-white font-semibold">${{ rule.targetPrice.toLocaleString() }}</span>
+                      </div>
+                      <span class="text-white/40 shrink-0">Pending Ticks</span>
+                    </div>
+                  } @empty {
+                    <div class="flex-grow flex items-center justify-center text-center text-white/30 text-[10px] py-4">
+                      No custom price thresholds configured in this session.
+                    </div>
+                  }
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        }
+      </section>
+
+      <!-- VIEW: Automated Trade Strategies suggestion tracker panel -->
+      <section id="strategy-logs-wrapper" class="lg:col-span-12 xl:col-span-7 flex flex-col gap-5" [class.hidden]="activeTab() !== 'strategies'">
+        <div id="strategy-card" class="border-[2px] border-black bg-white text-black p-6 rounded-[40px] flex flex-col gap-4">
+          <div class="flex items-center justify-between border-b border-black/10 pb-3">
+            <div>
+              <h2 id="trade-strategy-heading" class="text-lg font-black tracking-tighter uppercase italic text-black flex items-center gap-2">
+                <mat-icon class="text-black">psychology</mat-icon>
+                AI Trade Strategy Suggestions
+              </h2>
+              <p class="text-xs text-neutral-600 mt-1">Real-time indicators matching RSI and Bollinger band support bounds</p>
+            </div>
+            <span class="px-2.5 py-1 text-[9px] font-mono text-white bg-black rounded-full uppercase font-semibold">
+              Advisory live
+            </span>
+          </div>
+
+          <div id="suggestions-logs-scroll" class="max-h-[500px] overflow-y-auto flex flex-col gap-3.5 pr-1.5">
+            @for (s of strategySuggestionsList(); track s.id) {
+              <div id="strategy-block-{{ s.id }}" class="border-[1.5px] border-black bg-white hover:bg-neutral-50 p-4 rounded-2xl flex flex-col gap-2.5 transition group">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-black text-white font-mono text-xs font-semibold rounded">
+                      {{ s.ticker }}
+                    </span>
+                    <span [class]="s.action === 'BUY' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'" 
+                          class="px-2 py-0.5 rounded border text-[10px] font-mono font-bold uppercase">
+                      Indicator: {{ s.action }}
+                    </span>
+                    <span class="text-neutral-500 text-[10px] font-semibold uppercase tracking-wider">{{ s.strategyName }}</span>
+                  </div>
+                  <span class="text-[10px] font-mono text-neutral-500">{{ s.timestamp | date:'mediumTime' }}</span>
+                </div>
+                
+                <p class="text-neutral-800 text-xs tracking-tight leading-relaxed font-sans">
+                  {{ s.reason }}
+                </p>
+
+                <div class="flex justify-between items-center text-[10px] font-mono border-t border-neutral-100 pt-2 text-neutral-600">
+                  <span>Advisory Spot Price: <strong class="text-black">${{ s.price }}</strong></span>
+                  <button (click)="speakOutloudText('Trade advisor recommends ' + s.action + ' signal on ' + s.ticker + '. ' + s.reason)"
+                          class="text-neutral-900 hover:text-black font-semibold flex items-center gap-1 cursor-pointer">
+                    <mat-icon class="text-xs">volume_up</mat-icon>
+                    Read advisory outloud
+                  </button>
+                </div>
+              </div>
+            } @empty {
+              <div class="border-[1.5px] border-dashed border-neutral-200 rounded-3xl p-8 text-center text-neutral-500 text-xs flex flex-col items-center gap-2">
+                <mat-icon class="text-2xl text-neutral-400">hourglass_empty</mat-icon>
+                <span>Evaluating continuous pricing trends. Suggestions will register as RSI and Bollinger extremes trigger.</span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: Transcription logger view container -->
+      <section id="transcription-logs-wrapper" class="lg:col-span-12 xl:col-span-7 flex flex-col gap-5" [class.hidden]="activeTab() !== 'logs'">
+        <div id="logs-card" class="border-[1.5px] border-white/10 bg-[#0E0E10] p-6 rounded-[30px] flex flex-col gap-4">
+          
+          <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-3 gap-3">
+            <div>
+              <h2 id="transcripts-log-heading" class="text-sm font-mono uppercase tracking-widest text-white/50 flex items-center gap-2">
+                <mat-icon class="text-white/40 font-bold">article</mat-icon>
+                Speech Transcripts Logs ({{ filteredTranscriptionLogs().length }})
+              </h2>
+              <p class="text-xs text-white/40 mt-1 font-mono">Audio capture logs in this session</p>
+            </div>
+            
+            <!-- Search bar -->
+            <div class="relative max-w-sm">
+              <label for="filter-log-input" class="sr-only">Filter logs</label>
+              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40 select-none">
+                <mat-icon class="text-sm">search</mat-icon>
+              </span>
+              <input id="filter-log-input" type="text" [value]="logSearchQuery()" (input)="logSearchQuery.set($any($event.target).value)" placeholder="Filter logs..." 
+                     class="bg-[#0A0A0B] border border-white/10 text-xs text-white rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-white w-full font-mono placeholder-white/30" />
+            </div>
+          </div>
+
+          <div #logContainer id="transcripts-scroll" class="max-h-[440px] overflow-y-auto flex flex-col gap-3 pr-1.5 scroll-smooth">
+            @for (log of filteredTranscriptionLogs(); track log.id) {
+              <div id="log-block-{{ log.id }}" 
+                   [class]="log.role === 'user' ? 'bg-[#141416] border-white/10 self-end' : 'bg-emerald-950/10 border-emerald-500/20 self-start'"
+                   class="border max-w-[85%] rounded-xl p-3.5 flex flex-col gap-1 text-[11px] leading-snug tracking-normal shadow-sm">
+                <div class="flex items-center justify-between border-b border-white/5 pb-1 mb-1 font-mono text-[9px] uppercase tracking-wider">
+                  <span [class]="log.role === 'user' ? 'text-white/70' : 'text-emerald-400'" class="font-bold flex items-center gap-1">
+                    <mat-icon class="text-[10px]">{{ log.role === 'user' ? 'person' : 'smart_toy' }}</mat-icon>
+                    {{ log.role === 'user' ? 'Client' : 'Aria (Advisor)' }}
+                  </span>
+                  <span class="text-white/45 font-semibold">{{ log.timestamp }}</span>
+                </div>
+                <p class="text-white whitespace-pre-line">{{ log.text }}</p>
+              </div>
+            } @empty {
+              <div class="border border-dashed border-white/20 rounded-2xl p-8 text-center text-white/40 text-xs flex flex-col items-center gap-2">
+                <mat-icon class="text-2xl text-white/30">message</mat-icon>
+                <span>No transcriptions documented yet. Setup voice linkage to register.</span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: Configuration settings for voice/audio triggers -->
+      <section id="config-settings-wrapper" class="lg:col-span-12 xl:col-span-7 flex flex-col gap-5" [class.hidden]="activeTab() !== 'settings'">
+        <div id="settings-card" class="border-[1.5px] border-white/10 bg-[#0E0E10]/95 backdrop-blur-sm p-6 rounded-[30px] flex flex-col gap-5">
+          <div class="border-b border-white/10 pb-3">
+            <h2 id="audio-settings-heading" class="text-sm font-mono uppercase tracking-widest text-white/50 flex items-center gap-2">
+              <mat-icon class="text-white/40">tune</mat-icon>
+              Audio AI & Notification Settings
+            </h2>
+            <p class="text-xs text-white/40 mt-1 font-mono">Configure conversation speech parameters and volume thresholds</p>
+          </div>
+
+          <!-- voice selection preset option grid -->
+          <div id="voice-settings-block" class="flex flex-col gap-3">
+            <h3 class="text-xs font-mono uppercase tracking-wider text-white/75 flex items-center gap-1">
+              <mat-icon class="text-white/40 text-sm">record_voice_over</mat-icon>
+              AI Voice Preset selection
+            </h3>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+              @for (voice of ['Zephyr', 'Fenrir', 'Puck', 'Charon', 'Kore']; track voice) {
+                <button [id]="'voice-preset-' + voice" 
+                        (click)="setVoiceSetting(voice)"
+                        [class]="selectedVoice() === voice ? 'border-white bg-[#141416] text-white font-semibold' : 'border-white/10 bg-[#0A0A0B] text-white/40 hover:border-white/30 hover:text-white'"
+                        class="border-[1.5px] rounded-xl p-2.5 text-xs font-mono transition duration-200 flex flex-col items-center gap-1.5 cursor-pointer">
+                  <mat-icon class="text-sm">mic</mat-icon>
+                  <span>{{ voice }}</span>
+                </button>
+              }
+            </div>
+            <p class="text-[10px] text-white/30 font-mono">Modifying selection will immediately reboot active Gemini Live core session.</p>
+          </div>
+
+          <!-- Volume controls and triggers -->
+          <div id="vol-settings-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-white/10 pt-4">
+            
+            <!-- Output gain -->
+            <div class="flex flex-col gap-2">
+              <label for="vol-range-input" class="text-xs font-mono uppercase tracking-wider text-white/70 flex items-center justify-between">
+                <span>Output Advisor Volume</span>
+                <span class="font-mono text-emerald-400 font-bold">{{ Math.round(audioGain() * 100) }}%</span>
+              </label>
+              <input id="vol-range-input" type="range" min="0" max="1" step="0.05" [value]="audioGain()" (input)="audioGain.set($any($event.target).valueAsNumber)" 
+                     class="accent-white h-1.5 bg-[#0A0A0B] border border-white/10 rounded-lg appearance-none cursor-pointer" />
+              <span class="text-[9px] text-white/30 font-mono">Controls volume of playing technical indicators triggers & Voice responses.</span>
+            </div>
+
+            <!-- continuous reading -->
+            <div class="flex items-center justify-between p-3.5 bg-[#0a0a0b] border border-white/10 rounded-xl">
+              <div>
+                <span id="outloud-speech-label" class="text-xs font-semibold text-white/85 block">Outloud Speech responses</span>
+                <span class="text-[9px] text-white/30 font-mono">Enable to read transcripts autonomously over TTS</span>
+              </div>
+              
+              <!-- toggle -->
+              <button aria-labelledby="outloud-speech-label" (click)="autonomousOutput.set(!autonomousOutput())" [class]="autonomousOutput() ? 'bg-white' : 'bg-white/10'"
+                      class="w-11 h-6 rounded-full p-0.5 transition-all duration-200 relative inline-flex items-center cursor-pointer">
+                <span [class]="autonomousOutput() ? 'translate-x-5' : 'translate-x-0'"
+                      class="w-5 h-5 bg-[#0A0A0B] rounded-full transition-transform duration-200"></span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- microphone streaming settings slider -->
+          <div id="mic-settings-block" class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-white/10 pt-4">
+            
+            <div class="flex flex-col gap-1.5">
+              <span class="text-xs font-mono uppercase tracking-wider text-white/75 flex items-center gap-1.5">
+                <mat-icon class="text-white/40 text-sm">settings_remote</mat-icon>
+                Voice Activation Mode
+              </span>
+              <p class="text-[10px] text-white/30 pr-2">Choose 'Always-On Mic' for complete hands-free analysis, or manual control.</p>
+            </div>
+
+            <div class="flex items-center bg-[#0A0A0B] rounded-xl p-1 border border-white/10 justify-between gap-1">
+              <button (click)="inputStreamMode.set('live')" 
+                      [class]="inputStreamMode() === 'live' ? 'bg-white text-black font-semibold' : 'text-white/40 hover:text-white'"
+                      class="px-4 py-2 text-xs rounded-lg transition duration-200 flex-grow text-center cursor-pointer font-semibold uppercase text-[10px]">
+                Always-On Mic
+              </button>
+              <button (click)="inputStreamMode.set('ptt')" 
+                      [class]="inputStreamMode() === 'ptt' ? 'bg-white text-black font-semibold' : 'text-white/40 hover:text-white'"
+                      class="px-4 py-2 text-xs rounded-lg transition duration-200 flex-grow text-center cursor-pointer font-semibold uppercase text-[10px]">
+                Hold To Speak
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN WRAPPER: Aria live voice interface, terminal prompts, transcripts log, and alerts list -->
+      <section id="right-column-wrapper" class="lg:col-span-12 xl:col-span-5 flex flex-col gap-6">
+        
+        <!-- Voice Portal interface panel component -->
+        <article id="voice-portal-pane" class="border-t-2 border-r-2 border-white rounded-tr-[80px] p-6 bg-[#0E0E10] backdrop-blur-md flex flex-col gap-4 relative overflow-hidden">
+          
+          <!-- background design ring overlays -->
+          <div class="absolute -right-20 -bottom-20 w-52 h-52 border border-white/5 rounded-full pointer-events-none"></div>
+
+          <div class="flex items-center justify-between border-b border-white/10 pb-3.5 z-10">
+            <h3 id="panel-assistant-title" class="text-xs font-mono uppercase tracking-widest text-white/50 flex items-center gap-1.5">
+              <mat-icon class="text-emerald-400 text-sm animate-pulse">explore</mat-icon>
+              Voice Portal Terminal
+            </h3>
+            
+            <!-- Voice rate indicator -->
+            <span class="text-[9px] font-mono text-white/50 bg-[#0a0a0b] px-2.5 py-0.5 rounded border border-white/10">
+              Vocal presets: {{ selectedVoice() }}
+            </span>
+          </div>
+
+          <!-- Animated Vocal Core holographic node representation -->
+          <div id="holo-core-node" class="flex flex-col items-center justify-center p-6 bg-[#030303] border border-white/10 rounded-2xl select-none z-10 transition duration-300">
+            @if (aiSessionStatus() === 'active') {
+              <!-- Glowing energetic rotating circle waves, color transitions on speech -->
+              <div id="voice-core-active" class="h-28 w-28 rounded-full border border-emerald-500/30 flex items-center justify-center relative shadow-[0_0_32px_rgba(20,184,166,0.12)]">
+                <div class="absolute inset-2 rounded-full border border-dashed border-emerald-400/40 animate-spin"></div>
+                <!-- Waves height simulation when voice recording active -->
+                <div class="flex items-end gap-1.5 h-12 z-20">
+                  <span class="w-1 rounded-full bg-emerald-400 transition" [class.wave-bar]="isMicRecording() || audioSources.length > 0" class="h-3"></span>
+                  <span class="w-1 rounded-full bg-emerald-300 transition" [class.wave-bar]="isMicRecording() || audioSources.length > 0" class="h-6"></span>
+                  <span class="w-1 rounded-full bg-emerald-400 transition" [class.wave-bar]="isMicRecording() || audioSources.length > 0" class="h-9"></span>
+                  <span class="w-1 rounded-full bg-emerald-300 transition" [class.wave-bar]="isMicRecording() || audioSources.length > 0" class="h-5"></span>
+                  <span class="w-1 rounded-full bg-emerald-400 transition" [class.wave-bar]="isMicRecording() || audioSources.length > 0" class="h-2"></span>
+                </div>
+              </div>
+              <span id="advisor-status" class="text-xs font-mono text-emerald-400 mt-4 font-semibold tracking-wide animate-pulse">Aria is active and listening...</span>
+              <p class="text-[10px] text-white/40 font-mono mt-1 text-center">Hands-free speech transmission fully enabled</p>
+            } @else if (aiSessionStatus() === 'activating') {
+              <div id="voice-core-activating" class="h-28 w-28 rounded-full border border-dashed border-amber-500/40 flex items-center justify-center animate-spin">
+                <mat-icon class="text-2xl text-amber-400">hourglass_top</mat-icon>
+              </div>
+              <span id="advisor-status" class="text-xs font-mono text-amber-400 mt-4 font-semibold tracking-wide">Syncing Aria Advisor Link...</span>
+            } @else {
+              <!-- Inactive offline node placeholder -->
+              <div id="voice-core-inactive" class="h-28 w-28 rounded-full border border-white/10 flex items-center justify-center bg-[#0A0A0B] group">
+                <mat-icon class="text-4xl text-white/20 transition duration-300 group-hover:text-emerald-400">mic_off</mat-icon>
+              </div>
+              <span id="advisor-status" class="text-xs font-mono text-white/40 mt-4 font-semibold tracking-wide">Voice Module Offline</span>
+              <p class="text-[9px] text-white/30 mt-1 max-w-[200px] text-center font-mono">Press trigger button below to boot Aria AI gateway.</p>
+            }
+          </div>
+
+          <!-- Live Conversation Trigger buttons -->
+          <div id="portal-controls" class="flex flex-col gap-2.5 z-10">
+            @if (aiSessionStatus() !== 'active') {
+              <button id="session-boot-btn" 
+                      (click)="startAIPortationSession()"
+                      class="w-full py-3.5 bg-white hover:bg-neutral-200 text-black uppercase tracking-wider font-bold rounded-xl text-xs transition duration-200 cursor-pointer flex items-center justify-center gap-2">
+                <mat-icon class="text-sm font-bold">power_settings_new</mat-icon>
+                Boot Aria AI Gateway
+              </button>
+            } @else {
+              <!-- Active controls -->
+              <div class="grid grid-cols-2 gap-2">
+                <!-- Toggle Speech state -->
+                @if (inputStreamMode() === 'ptt') {
+                  <button id="ptt-trigger-speech" 
+                          (mousedown)="startMicrophoneCapture()" 
+                          (mouseup)="stopMicrophoneCapture()"
+                          (touchstart)="startMicrophoneCapture(); $event.preventDefault()" 
+                          (touchend)="stopMicrophoneCapture()"
+                          [class]="isMicRecording() ? 'bg-emerald-500 text-black animate-pulse font-bold' : 'bg-[#0A0A0B] hover:bg-[#141416] border border-white/10 text-white'"
+                          class="py-3 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition flex items-center justify-center gap-1.5">
+                    <mat-icon class="text-sm">{{ isMicRecording() ? 'mic' : 'mic_none' }}</mat-icon>
+                    {{ isMicRecording() ? 'Release to Send' : 'Hold to speak' }}
+                  </button>
+                } @else {
+                  <button id="toggle-mic-trigger" 
+                          (click)="isMicRecording() ? stopMicrophoneCapture() : startMicrophoneCapture()" 
+                          [class]="isMicRecording() ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' : 'bg-[#0A0A0B] hover:bg-[#141416] border border-white/10 text-white'"
+                          class="py-3 rounded-xl text-xs font-mono uppercase tracking-wider border cursor-pointer transition flex items-center justify-center gap-1.5">
+                    <mat-icon class="text-sm">{{ isMicRecording() ? 'mic' : 'mic_off' }}</mat-icon>
+                    {{ isMicRecording() ? 'Mic Always On' : 'Mic Truncated' }}
+                  </button>
+                }
+
+                <button id="session-teardown-btn" 
+                        (click)="stopAIPortationSession()" 
+                        class="py-3 bg-rose-950/20 hover:bg-rose-900 border border-rose-900/40 text-rose-300 hover:text-white rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer transition flex items-center justify-center gap-1.5">
+                  <mat-icon class="text-sm">stop_circle</mat-icon>
+                  Log Off Session
+                </button>
+              </div>
+            }
+
+            <!-- Alternate character queries text prompt input line -->
+            <div id="manual-text-input-row" class="relative mt-1">
+              <label for="manual-text-field" class="sr-only">Type financial query manually</label>
+              <input #textInp id="manual-text-field" type="text" 
+                     (keyup.enter)="sendQueryMessage(textInp)" 
+                     placeholder="Type ticker question manually..." 
+                     class="bg-[#0A0A0B] border border-white/10 rounded-xl leading-none text-xs text-white p-3.5 pr-10 w-full focus:outline-none focus:border-white placeholder-white/20 block" />
+              <button id="manual-send-btn" (click)="sendQueryMessage(textInp)" 
+                      class="absolute right-1 top-1/2 -translate-y-1/2 text-white hover:text-white/80 p-1.5 hover:bg-[#141416] rounded-lg cursor-pointer">
+                <mat-icon class="text-sm">send</mat-icon>
+              </button>
+            </div>
+            <p class="text-[9px] text-white/30 text-center font-mono">Conversational AI keeps simulation contexts fully indexed.</p>
+          </div>
+
+        </article>
+
+        <!-- Brief recent strategy overlay list on dashboard -->
+        <article id="quick-strategy-overview" class="border border-white/10 rounded-2xl p-4 bg-[#0E0E10]">
+          <div class="flex items-center justify-between border-b border-white/10 pb-2.5 mb-2.5">
+            <h4 class="text-xs font-mono uppercase tracking-wider text-white/50 flex items-center gap-1">
+              <mat-icon class="text-emerald-400 text-sm">auto_graph</mat-icon>
+              Latest Strategy Suggestions
+            </h4>
+            <button (click)="activeTab.set('strategies')" class="text-[9px] text-emerald-400 hover:underline uppercase font-mono cursor-pointer">
+              View All
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            @for (s of strategySuggestionsList().slice(0, 3); track s.id) {
+              <div class="bg-[#0A0A0B] border border-white/10 p-2.5 rounded-xl text-[10px] flex flex-col gap-1 leading-normal">
+                <div class="flex items-center justify-between font-mono text-[9px] text-white/40">
+                  <div class="flex items-center gap-1">
+                    <span class="text-emerald-400 font-bold font-sans">{{ s.ticker }}</span>
+                    <span [class]="s.action === 'BUY' ? 'text-emerald-400' : 'text-rose-400'" class="uppercase font-semibold">
+                      {{ s.action }}
+                    </span>
+                  </div>
+                  <span>{{ s.timestamp | date:'mediumTime' }}</span>
+                </div>
+                <p class="text-white/85 font-sans tracking-tight line-clamp-2">
+                  {{ s.reason }}
+                </p>
+                <span class="text-[9px] text-white/40 mt-0.5 uppercase tracking-widest font-mono">{{ s.strategyName }}</span>
+              </div>
+            } @empty {
+              <div class="text-center py-5 text-white/30 text-[10px] font-mono border border-dashed border-white/10 rounded-xl">
+                Awaiting first technical indicator breach...
+              </div>
+            }
+          </div>
+        </article>
+
+        <!-- Brief transcript overlay list on dashboard -->
+        <article id="quick-transcript-overview" class="border border-white/10 rounded-2xl p-4 bg-[#0E0E10]">
+          <div class="flex items-center justify-between border-b border-white/10 pb-2.5 mb-2.5">
+            <h4 class="text-xs font-mono uppercase tracking-wider text-white/50 flex items-center gap-1">
+              <mat-icon class="text-emerald-400 text-sm">history</mat-icon>
+              Conversational Transcripts Logs
+            </h4>
+            <button (click)="activeTab.set('logs')" class="text-[9px] text-emerald-400 hover:underline uppercase font-mono cursor-pointer">
+              Full Logs
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            @for (log of transcriptionLogsList().slice(0, 3); track log.id) {
+              <div [class]="log.role === 'user' ? 'bg-[#141416]/90 border-white/5' : 'bg-emerald-950/10 border-emerald-500/10'" 
+                   class="p-2.5 rounded-xl text-[10px] border flex flex-col gap-0.5 leading-normal">
+                <span [class]="log.role === 'user' ? 'text-white/70' : 'text-emerald-400'" class="font-mono text-[9px] font-bold uppercase tracking-wider">
+                  {{ log.role === 'user' ? 'User' : 'Aria' }}
+                </span>
+                <p class="text-white/80 font-sans tracking-tight truncate">
+                  {{ log.text }}
+                </p>
+              </div>
+            } @empty {
+              <div class="text-center py-5 text-white/30 text-[10px] font-mono border border-dashed border-white/10 rounded-xl">
+                Speak to document speech logs.
+              </div>
+            }
+          </div>
+        </article>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Client-Facing Visual Toast Overlay notification panels -->
+  <div id="visual-alert-toasts-overlay" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm w-full">
+    @for (toast of toastsList(); track toast.id) {
+      <div id="toast-notify-{{ toast.id }}" class="bg-slate-900 border border-teal-500/20 shadow-2xl shadow-slate-950/50 p-3.5 rounded-2xl flex items-start gap-2.5 backdrop-blur border-l-4 border-l-teal-500 transition duration-300 animate-slide-in">
+        <mat-icon class="text-teal-400 text-lg shrink-0 mt-0.5">notification_important</mat-icon>
+        <div class="flex-grow">
+          <p class="text-slate-200 text-xs tracking-tight font-sans leading-relaxed">{{ toast.text }}</p>
+          <span class="text-[9px] font-mono text-slate-500 block mt-1.5">{{ toast.timestamp }}</span>
+        </div>
+        <button (click)="removeToast(toast.id)" class="text-slate-500 hover:text-white shrink-0 cursor-pointer">
+          <mat-icon class="text-xs">close</mat-icon>
+        </button>
+      </div>
+    }
+  </div>
+
+</div>

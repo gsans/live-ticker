@@ -1,0 +1,6 @@
+{
+  "name": "Financial Market Live API Assistant",
+  "description": "A real-time financial market data application featuring a live audio conversation assistant, technical analytics, price alert notifications, transcription logging, and automated trade strategy suggestions.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
